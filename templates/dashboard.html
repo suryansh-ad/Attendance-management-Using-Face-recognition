@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="stats-grid">
+    <article class="stat-card">
+        <span>Total Students</span>
+        <strong>{{ total_students }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Total Subjects</span>
+        <strong>{{ total_subjects }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Selected Date</span>
+        <strong>{{ today }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Selected Subject</span>
+        <strong>{{ selected_subject.subject_code if selected_subject else "None" }}</strong>
+    </article>
+</section>
+
+<section class="panel help-panel">
+    <h2>Teacher Flow</h2>
+    <p>1. Add students and enroll their faces once.</p>
+    <p>2. Create a subject and assign students to that subject.</p>
+    <p>3. Choose the subject and session date, then start the session.</p>
+    <p>4. Enrolled students start as <code>Absent</code>. Each scan changes only recognized enrolled students to <code>Present</code>.</p>
+    <p>5. Students outside the chosen subject show <code>Not enrolled</code>.</p>
+</section>
+
+<section class="content-grid three-columns">
+    <article class="panel">
+        <h2>Enroll Student</h2>
+        <p class="section-copy">Face enrollment opens the webcam after submit.</p>
+        <form class="enroll-form" method="post" action="{{ url_for('add_student') }}">
+            <label>
+                <span>Student Code</span>
+                <input type="text" name="student_code" placeholder="STU001" required>
+            </label>
+            <label>
+                <span>Full Name</span>
+                <input type="text" name="full_name" placeholder="Satya Kumar" required>
+            </label>
+            <label>
+                <span>Department</span>
+                <input type="text" name="department" placeholder="Computer Science" required>
+            </label>
+            <button class="secondary-btn" type="submit">Add Student</button>
+        </form>
+    </article>
+
+    <article class="panel">
+        <h2>Create Subject</h2>
+        <p class="section-copy">Subjects are unique by code.</p>
+        <form class="enroll-form" method="post" action="{{ url_for('add_subject') }}">
+            <label>
+                <span>Subject Code</span>
+                <input type="text" name="subject_code" placeholder="CS101" required>
+            </label>
+            <label>
+                <span>Subject Name</span>
+                <input type="text" name="subject_name" placeholder="Data Structures" required>
+            </label>
+            <button class="secondary-btn" type="submit">Add Subject</button>
+        </form>
+    </article>
+
+    <article class="panel">
+        <h2>Enroll Student In Subject</h2>
+        <p class="section-copy">Use this after both the student and subject already exist.</p>
+        <form class="enroll-form" method="post" action="{{ url_for('add_subject_enrollment') }}">
+            <label>
+                <span>Student</span>
+                <select name="student_id" required>
+                    <option value="">Select student</option>
+                    {% for student in students %}
+                        <option value="{{ student.id }}">{{ student.student_code }} - {{ student.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Subject</span>
+                <select name="subject_id" required>
+                    <option value="">Select subject</option>
+                    {% for subject in subjects %}
+                        <option value="{{ subject.id }}" {% if selected_subject and selected_subject.id == subject.id %}selected{% endif %}>
+                            {{ subject.subject_code }} - {{ subject.subject_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button class="secondary-btn" type="submit">Assign Subject</button>
+        </form>
+    </article>
+</section>
+
+<section class="content-grid">
+    <article class="panel">
+        <h2>Subjects</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Open</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subject in subjects %}
+                        <tr>
+                            <td>{{ subject.subject_code }}</td>
+                            <td>{{ subject.subject_name }}</td>
+                            <td>
+                                <a class="link-btn" href="{{ url_for('dashboard', subject_id=subject.id, session_date=today) }}">Select</a>
+                            </td>
+                            <td>
+                                <form method="post" action="{{ url_for('remove_subject', subject_id=subject.id) }}">
+                                    <button class="danger-btn" type="submit">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="4">No subjects added yet.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <article class="panel">
+        <h2>Students</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ student.student_code }}</td>
+                            <td>{{ student.full_name }}</td>
+                            <td>{{ student.department }}</td>
+                            <td>
+                                <form method="post" action="{{ url_for('remove_student', student_id=student.id) }}">
+                                    <button class="danger-btn" type="submit">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="4">No students enrolled yet.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+
+<section class="panel">
+    <h2>Subject Session</h2>
+    <form class="session-toolbar" method="get" action="{{ url_for('dashboard') }}">
+        <label>
+            <span>Subject</span>
+            <select name="subject_id">
+                <option value="">Select subject</option>
+                {% for subject in subjects %}
+                    <option value="{{ subject.id }}" {% if selected_subject and selected_subject.id == subject.id %}selected{% endif %}>
+                        {{ subject.subject_code }} - {{ subject.subject_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Session Date</span>
+            <input type="date" name="session_date" value="{{ today }}">
+        </label>
+        <button class="secondary-btn" type="submit">Load Session</button>
+    </form>
+
+    {% if selected_subject %}
+        <div class="session-summary">
+            <div class="pill">Subject: {{ selected_subject.subject_code }} - {{ selected_subject.subject_name }}</div>
+            <div class="pill">Enrolled: {{ enrolled_in_selected_subject }}</div>
+            <div class="pill present-pill">Present: {{ subject_summary.present }}</div>
+            <div class="pill absent-pill">Absent: {{ subject_summary.absent }}</div>
+        </div>
+
+        <div class="action-row">
+            <form method="post" action="{{ url_for('start_subject_session', subject_id=selected_subject.id) }}">
+                <input type="hidden" name="session_date" value="{{ today }}">
+                <button class="secondary-btn" type="submit">Start Or Reset Session Defaults</button>
+            </form>
+            <form method="post" action="{{ url_for('scan_attendance', subject_id=selected_subject.id) }}">
+                <input type="hidden" name="session_date" value="{{ today }}">
+                <button class="primary-btn" type="submit">Scan Present Student</button>
+            </form>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Attendance</th>
+                        <th>Confidence</th>
+                        <th>Remove</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in subject_roster %}
+                        <tr>
+                            <td>{{ row.student_code }}</td>
+                            <td>{{ row.full_name }}</td>
+                            <td>{{ row.department }}</td>
+                            <td>{{ row.attendance_status }}</td>
+                            <td>{{ "%.1f"|format(row.confidence) }}%</td>
+                            <td>
+                                <form method="post" action="{{ url_for('remove_subject_enrollment', subject_id=selected_subject.id, student_id=row.id) }}">
+                                    <button class="danger-btn" type="submit">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6">No students are enrolled in this subject yet.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Session Logs</h3>
+        <form class="session-toolbar" method="get" action="{{ url_for('dashboard') }}">
+            <input type="hidden" name="subject_id" value="{{ selected_subject.id }}">
+            <input type="hidden" name="session_date" value="{{ today }}">
+            <label>
+                <span>Status Filter</span>
+                <select name="attendance_filter">
+                    <option value="All" {% if attendance_filter == "All" %}selected{% endif %}>All</option>
+                    <option value="Present" {% if attendance_filter == "Present" %}selected{% endif %}>Present</option>
+                    <option value="Absent" {% if attendance_filter == "Absent" %}selected{% endif %}>Absent</option>
+                </select>
+            </label>
+            <button class="secondary-btn" type="submit">Apply Filter</button>
+        </form>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Confidence</th>
+                        <th>Marked At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in subject_attendance_logs %}
+                        <tr>
+                            <td>{{ log.student_code }}</td>
+                            <td>{{ log.full_name }}</td>
+                            <td>{{ log.status }}</td>
+                            <td>{{ "%.1f"|format(log.confidence) }}%</td>
+                            <td>{{ log.marked_at }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5">No attendance rows yet for this subject and date.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="section-copy">Select a subject and date to manage one class session.</p>
+    {% endif %}
+</section>
+{% endblock %}
